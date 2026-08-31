@@ -1,0 +1,158 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.14"
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run tests
+        run: uv run pytest --junitxml=report.xml --cov=app --cov-report=term-missing
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-report-backend
+          path: backend/report.xml
+
+  cli:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cli
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run tests
+        run: uv run pytest --junitxml=report.xml
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-report-cli
+          path: cli/report.xml
+
+  report:
+    needs: [backend, cli]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          pattern: "*report*"
+
+      - name: Initialize git for test reporter
+        run: |
+          git init
+          git config user.email "ci@github.com"
+          git config user.name "CI"
+          git add -A
+          git commit --allow-empty -m "ci"
+
+      - name: Publish backend results
+        id: backend
+        uses: dorny/test-reporter@v3
+        continue-on-error: true
+        with:
+          name: Backend Tests (pytest)
+          path: artifacts/test-report-backend/report.xml
+          reporter: java-junit
+          fail-on-error: "false"
+
+      - name: Publish CLI results
+        id: cli
+        uses: dorny/test-reporter@v3
+        continue-on-error: true
+        with:
+          name: CLI Tests (pytest)
+          path: artifacts/test-report-cli/report.xml
+          reporter: java-junit
+          fail-on-error: "false"
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        uses: actions/github-script@v9
+        env:
+          backend_passed:     ${{ steps.backend.outputs.passed }}
+          backend_failed:     ${{ steps.backend.outputs.failed }}
+          backend_skipped:    ${{ steps.backend.outputs.skipped }}
+          backend_conclusion: ${{ steps.backend.outputs.conclusion }}
+          cli_passed:         ${{ steps.cli.outputs.passed }}
+          cli_failed:         ${{ steps.cli.outputs.failed }}
+          cli_skipped:        ${{ steps.cli.outputs.skipped }}
+          cli_conclusion:     ${{ steps.cli.outputs.conclusion }}
+        with:
+          script: |
+            function suite(label, prefix) {
+              const passed     = parseInt(process.env[`${prefix}_passed`]     || '0');
+              const failed     = parseInt(process.env[`${prefix}_failed`]     || '0');
+              const skipped    = parseInt(process.env[`${prefix}_skipped`]    || '0');
+              const conclusion =                     process.env[`${prefix}_conclusion`] || 'skipped';
+              const total      = passed + failed + skipped;
+              const emoji = conclusion === 'success' ? '✅' : conclusion === 'failure' ? '❌' : '⏭️';
+              return { passed, failed, skipped, total, line: `${emoji} **${label}** — ${passed} passed, ${failed} failed, ${skipped} skipped (${total} total)` };
+            }
+
+            const results = [
+              suite('Backend (pytest)', 'backend'),
+              suite('CLI (pytest)',     'cli'),
+            ];
+
+            const sha = context.sha;
+            const shaLink = `[\`${sha.slice(0, 7)}\`](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${sha})`;
+            const totalPassed  = results.reduce((s, r) => s + r.passed,  0);
+            const totalFailed  = results.reduce((s, r) => s + r.failed,  0);
+            const totalSkipped = results.reduce((s, r) => s + r.skipped, 0);
+            const total = totalPassed + totalFailed + totalSkipped;
+
+            const summary = totalFailed === 0 && totalSkipped === 0
+              ? `**Summary:** ✅ All ${total} tests passed`
+              : `**Summary:** ${totalPassed} ✅ passed` + (totalFailed > 0 ? `, ${totalFailed} ❌ failed` : '') + (totalSkipped > 0 ? `, ${totalSkipped} ⏭️ skipped` : '') + ` (${total} total)`;
+
+            const body = `## 🧪 Test Results — ${shaLink}\n\n`
+              + results.map(r => r.line).join('\n')
+              + `\n\n${summary}`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
