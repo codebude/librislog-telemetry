@@ -1,2 +1,105 @@
 # librislog-telemetry
-Minmal, open source and transparent telemetry server for librislog
+
+Minimal, open source and transparent telemetry server for [LibrisLog](https://github.com/codebude/librislog).
+
+> `docker compose up -d` → anonymous, aggregate usage statistics for your
+> open-source app, with a clean public dashboard. No vendor lock-in.
+
+---
+
+## What it does
+
+LibrisLog installations send a tiny anonymous heartbeat once per day:
+
+```json
+{
+  "message_version": 1,
+  "installation_id": "random-anonymous-id",
+  "version": "v1.2.0",
+  "os": "Linux",
+  "architecture": "x64",
+  "runtime": "docker"
+}
+```
+
+The `message_version` field is the message-schema version. Every version is a
+fully self-contained model declaring exactly its own fields — so a future
+version can **add** new fields *or* **drop** existing ones (a dropped field is
+rejected with a 422 if still sent). Shared normalizers live in
+`TelemetryCommonMixin` and apply to whatever version declares the field.
+Adding version 2 means subclassing the base with `message_version = 2`,
+extending the union in `schemas.py`, and adding a dispatch branch in
+`routers/telemetry.py`. Unknown versions are rejected.
+
+The server:
+
+- **Stores one row per installation** (upsert on each check-in), so the dataset
+  stays small and bounded — it never grows unboundedly.
+- **Rejects invalid payloads** with strict schema validation (422), and
+  **rate-limits per IP** to keep bots out.
+- **Never stores personal data** — no IPs, no paths, no library contents. Just
+  an anonymous ID and basic environment info.
+- **Serves a public dashboard** at `/` showing total/active installations,
+  version distribution, operating systems, architectures and runtimes.
+
+## Quick Start (local)
+
+```bash
+uv sync
+uv run ltel migrate        # create the SQLite schema
+uv run ltel seed --count 25  # optional: fake data for dashboard development
+uv run ltel run            # http://127.0.0.1:8001
+```
+
+Or with Docker:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Send a test heartbeat:
+
+```bash
+curl -X POST http://localhost:8001/api/telemetry \
+  -H "Content-Type: application/json" \
+  -d '{"message_version":1,"installation_id":"example-1","version":"v1.0.0","os":"Linux","architecture":"x64","runtime":"docker"}'
+```
+
+Open **http://127.0.0.1:8001** to view the dashboard.
+
+## API
+
+| Endpoint | Description |
+|---|---|
+| `POST /api/telemetry` | Ingests a telemetry heartbeat (unauthenticated, rate-limited). |
+| `GET /api/stats` | Aggregate statistics for the dashboard. |
+| `GET /api/health` | Health check (db connectivity + schema). |
+| `GET /api/docs` | Interactive OpenAPI docs. |
+| `GET /` | Public dashboard. |
+
+## Why no API key?
+
+The sending client (librislog) is open source — an API key bundled with it
+would be public anyway. Spam protection instead relies on:
+
+1. **Strict schema validation** — only well-formed heartbeats are stored.
+2. **Per-IP rate limiting** — configurable via `RATE_LIMIT_PER_MINUTE`.
+3. **Bounded dataset** — one row per installation, so even a flood of fake
+   installation IDs only creates empty rows (cleaned by retention, and the
+   dashboard only counts non-empty fields).
+
+
+## Development
+
+- **Backend** (`backend/`): FastAPI + SQLModel + SQLite, Alembic migrations,
+  pytest. Port `8001`.
+- **Devtools CLI** (`cli/`, `ltel`): run server, migrate, seed, run tests,
+  manage Docker.
+
+```bash
+uv run ltel test all   # run all test suites
+```
+
+## License
+
+[MIT](LICENSE)

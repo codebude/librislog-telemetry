@@ -216,3 +216,25 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+/ideas.txt
+/backend/data/
+/data/
+/data-e2e/
+/backend/data/
+!frontend/src/lib
+cookies.txt
+profile-snapshot
+
+node_modules/
+/*.png
+*-snapshot.md
+
+uvicorn.log
+
+# AI tools
+/.memsearch
+/.playwright-mcp
+/.sverklo
+.plan/
+/.opencode

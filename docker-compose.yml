@@ -1,0 +1,11 @@
+services:
+  backend:
+    image: ghcr.io/codebude/librislog-telemetry/librislog-telemetry-api:latest
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data:/app/data
+    environment:
+      DATABASE_URL: sqlite:////app/data/telemetry.db
+      FORWARDED_ALLOW_IPS: "*"

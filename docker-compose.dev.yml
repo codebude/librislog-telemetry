@@ -1,0 +1,15 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-v0.0.0-dev}
+        GIT_SHA: ${GIT_SHA:-unknown}
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data:/app/data
+    environment:
+      DATABASE_URL: sqlite:////app/data/telemetry.db
+    restart: unless-stopped
