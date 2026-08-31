@@ -38,7 +38,10 @@ The server:
 - **Rejects invalid payloads** with strict schema validation (422), and
   **rate-limits per IP** to keep bots out.
 - **Never stores personal data** — no IPs, no paths, no library contents. Just
-  an anonymous ID and basic environment info.
+  an anonymous ID and basic environment info. IPs are used transiently for rate
+  limiting but are never stored, and the server logs no access log — rate-limit
+  warnings appear with the trailing octets masked (`192.168.1.x` by default,
+  configurable via `LOG_IP_MASK_OCTETS`).
 - **Serves a public dashboard** at `/` showing total/active installations,
   version distribution, operating systems, architectures and runtimes.
 

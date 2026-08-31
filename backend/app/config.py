@@ -2,6 +2,7 @@
 
 from typing import List
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,7 +19,17 @@ class Settings(BaseSettings):
     # public and ingestion is intentionally unauthenticated (the client is
     # open source), so rate limiting is the primary spam defence.
     rate_limit_per_minute: int = 4
+    # How many trailing IPv4 octets to mask in logs (e.g. rate-limit warnings).
+    # 1 keeps "192.168.1.x", 2 keeps "192.168.x.x". Keeps the prefix visible so
+    # repeat offenders can still be spotted while the host part stays anonymous.
+    log_ip_mask_octets: int = 1
     forwarded_allow_ips: str = "*"
+
+    @field_validator("log_ip_mask_octets")
+    @classmethod
+    def validate_mask_octets(cls, value: int) -> int:
+        """Clamp the mask depth to the valid 1..4 range."""
+        return max(1, min(value, 4))
 
 
 settings: Settings = Settings()

@@ -16,7 +16,7 @@ from app.routers import dashboard, health, stats, telemetry
 
 logger = logging.getLogger(__name__)
 
-configure_logging(settings.log_level)
+configure_logging(settings.log_level, mask_octets=settings.log_ip_mask_octets)
 
 
 @asynccontextmanager

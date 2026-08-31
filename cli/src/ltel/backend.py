@@ -16,7 +16,7 @@ def _run_uv(args: list[str]) -> int:
 
 def cmd_run(*, reload: bool, port: int) -> None:
     console.print(f"[bold]Starting backend on http://127.0.0.1:{port}[/bold]")
-    args = ["uvicorn", "app.main:app", "--port", str(port), "--use-colors"]
+    args = ["uvicorn", "app.main:app", "--port", str(port), "--use-colors", "--no-access-log"]
     if reload:
         args.append("--reload")
     code = _run_uv(args)
