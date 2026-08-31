@@ -1,0 +1,10 @@
+services:
+  backend:
+    image: ghcr.io/codebude/librislog-telemetry/librislog-telemetry-api:latest
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    # The SQLite DB lives at /app/data/telemetry.db (the config.py default
+    # resolves there because WORKDIR is /app). Persist it on the host.
+    volumes:
+      - ./data:/app/data
