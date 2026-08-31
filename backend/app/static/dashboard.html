@@ -132,7 +132,7 @@
       <p class="sub">
         Anonymous, aggregate usage statistics for the LibrisLog book-tracking
         app. This page shows how many people run LibrisLog, on which platforms,
-        and with which versions — nothing personally identifiable.
+        and with which versions, nothing personally identifiable.
       </p>
       <p class="updated" id="updated"></p>
     </header>
@@ -179,7 +179,7 @@
       <h2>What is this?</h2>
       <ul>
         <li><strong>No personal data.</strong> Each installation sends a random, anonymous ID plus its version, operating system, architecture and runtime. No IPs, no paths, no library contents are stored.</li>
-        <li><strong>One row per installation.</strong> The database keeps a single row per installation that is updated on each check-in, so the dataset stays small and bounded — it never grows unboundedly.</li>
+        <li><strong>One row per installation.</strong> The database keeps a single row per installation that is updated on each check-in, so the dataset stays small and bounded, it never grows unboundedly.</li>
         <li><strong>Breakdowns cover active installations.</strong> The versions, operating system, architecture and runtime charts only count installations that checked in during the last 30 days. Older, inactive installations are excluded (they are moved to a pruned table after a year without activity).</li>
         <li><strong>How to opt out.</strong> You can disable telemetry in LibrisLog's settings. If you do, this server never hears from your installation again.</li>
         <li><strong>This page is public.</strong> Only aggregate counts are shown, never individual installations.</li>
@@ -187,7 +187,7 @@
     </div>
 
     <footer>
-      Powered by <a href="https://github.com/codebude/librislog-telemetry">librislog-telemetry</a> — open source and transparent.
+      Powered by <a href="https://github.com/codebude/librislog-telemetry">librislog-telemetry</a>, open source and transparent. Server version <span id="server-version">–</span>.
     </footer>
   </div>
 
@@ -205,6 +205,7 @@
       document.getElementById('active-7d').textContent = data.active_7d.toLocaleString();
       document.getElementById('active-30d').textContent = data.active_30d.toLocaleString();
       document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleString();
+      document.getElementById('server-version').textContent = data.server_version;
 
       const days = data.daily.map(d => d.date);
       const counts = data.daily.map(d => d.count);

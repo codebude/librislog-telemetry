@@ -132,3 +132,4 @@ class StatsOut(BaseModel):
     architectures: list[StatEntry]
     runtimes: list[StatEntry]
     daily: list[DailyStat]
+    server_version: str

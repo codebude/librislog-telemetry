@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlmodel import Session
 
+from app._build_info import __version__
 from app.database import get_session
 from app.models import Installation, PrunedInstallation
 from app.schemas import DailyStat, StatEntry, StatsOut
@@ -81,4 +82,5 @@ async def get_stats(
         architectures=_count_group(session, Installation.architecture, active_since=cutoff),
         runtimes=_count_group(session, Installation.runtime, active_since=cutoff),
         daily=daily,
+        server_version=__version__,
     )
