@@ -71,6 +71,60 @@ curl -X POST http://localhost:8001/api/telemetry \
 
 Open **http://127.0.0.1:8001** to view the dashboard.
 
+## Docker Compose Setup & Configuration
+
+The project ships two compose files:
+
+| File | Purpose |
+|---|---|
+| `docker-compose.dev.yml` | Local development — builds the image from source (`docker compose -f docker-compose.dev.yml up --build`) |
+| `docker-compose.yml` | Production — pulls the published image from GHCR (`docker compose up -d`) |
+
+Both mount the host directory `./data` into the container at `/app/data`. The
+SQLite database (`telemetry.db`) lives there, so your data survives container
+restarts and is easy to back up. That volume is the only thing you need to
+persist.
+
+### Passing configuration
+
+All settings are read from environment variables by the backend
+([pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/)).
+In Docker, the simplest way is `env_file: .env`:
+
+```yaml
+services:
+  backend:
+    image: ghcr.io/codebude/librislog-telemetry/librislog-telemetry-api:latest
+    env_file: .env
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data:/app/data
+```
+
+Start by copying the example file:
+
+```bash
+cp .env.example .env
+# edit .env to your liking
+docker compose up -d
+```
+
+### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///./data/telemetry.db` | SQLAlchemy database URL. In the container this resolves to `/app/data/telemetry.db` because the image's working directory is `/app`. |
+| `LOG_LEVEL` | `INFO` | Logging verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
+| `RATE_LIMIT_PER_MINUTE` | `4` | Max telemetry requests per IP per minute before the endpoint returns `429`. The `.env.example` ships with `60`. |
+| `LOG_IP_MASK_OCTETS` | `1` | How many trailing IPv4 octets are masked in log output (`1` → `192.168.1.x`, `2` → `192.168.x.x`). The prefix stays visible so repeat offenders can still be spotted. |
+| `CORS_ORIGINS` | `["http://localhost:8001"]` | Allowed CORS origins, JSON array. |
+| `FORWARDED_ALLOW_IPS` | `*` | IPs (or `*`) trusted to send `X-Forwarded-For`/`X-Forwarded-Proto`. Set to your reverse-proxy IP or CIDR in production. |
+
+> The reference file is `.env.example`. Copy it to `.env` before starting —
+> this project works with zero configuration out of the box, but the example
+> documents every knob you can turn.
+
 ## API
 
 | Endpoint | Description |
