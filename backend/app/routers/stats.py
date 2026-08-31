@@ -4,8 +4,7 @@ from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
-from sqlmodel import Session
+from sqlmodel import Session, col, func, select
 
 from app._build_info import __version__
 from app.database import get_session
@@ -24,19 +23,23 @@ def _count_group(session: Session, column, *, active_since) -> list[StatEntry]:
     Drops empties, sorts by count descending.
     """
     rows = session.exec(
-        select(column, func.count(Installation.installation_id))
-        .where(column != "")
-        .where(Installation.last_seen_at >= active_since)
+        select(column, func.count(col(Installation.installation_id)))
+        .where(col(column) != "")
+        .where(col(Installation.last_seen_at) >= active_since)
         .group_by(column)
-        .order_by(func.count(Installation.installation_id).desc())
+        .order_by(func.count(col(Installation.installation_id)).desc())
     ).all()
     return [StatEntry(label=str(label), count=int(count)) for label, count in rows]
 
 
 def _total_installations(session: Session) -> int:
     """All-time installation count: live rows plus pruned tombstones."""
-    live = session.exec(select(func.count(Installation.installation_id))).scalar() or 0
-    pruned = session.exec(select(func.count(PrunedInstallation.installation_id))).scalar() or 0
+    live = session.exec(
+        select(func.count(col(Installation.installation_id)))
+    ).one()
+    pruned = session.exec(
+        select(func.count(col(PrunedInstallation.installation_id)))
+    ).one()
     return int(live + pruned)
 
 
@@ -52,9 +55,9 @@ async def get_stats(
     def _active(hours: int) -> int:
         cutoff = now - timedelta(hours=hours)
         return session.exec(
-            select(func.count(Installation.installation_id))
-            .where(Installation.last_seen_at >= cutoff)
-        ).scalar() or 0
+            select(func.count(col(Installation.installation_id)))
+            .where(col(Installation.last_seen_at) >= cutoff)
+        ).one()
 
     # Active installations within 7d / 30d windows.
     active_7d = _active(24 * 7)
@@ -64,12 +67,12 @@ async def get_stats(
     cutoff = now - timedelta(days=30)
     rows = session.exec(
         select(
-            func.date(Installation.last_seen_at),
-            func.count(Installation.installation_id),
+            func.date(col(Installation.last_seen_at)),
+            func.count(col(Installation.installation_id)),
         )
-        .where(Installation.last_seen_at >= cutoff)
-        .group_by(func.date(Installation.last_seen_at))
-        .order_by(func.date(Installation.last_seen_at))
+        .where(col(Installation.last_seen_at) >= cutoff)
+        .group_by(func.date(col(Installation.last_seen_at)))
+        .order_by(func.date(col(Installation.last_seen_at)))
     ).all()
     daily = [DailyStat(date=str(date), count=int(count)) for date, count in rows]
 

@@ -36,7 +36,10 @@ async def _periodic_prune(interval_hours: int) -> None:
         try:
             with next(get_session()) as session:
                 pruned = await loop.run_in_executor(
-                    None, prune_stale_installations, session, settings.prune_after_days
+                    None,
+                    lambda: prune_stale_installations(
+                        session, older_than_days=settings.prune_after_days
+                    ),
                 )
                 if pruned:
                     logger.info("Retention: pruned %d stale installation(s)", pruned)

@@ -10,7 +10,7 @@ import random
 import sys
 from datetime import timedelta
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.database import engine
 from app.models import Installation
@@ -26,8 +26,8 @@ def _existing_ids(session: Session, count: int) -> set[str]:
     """Return the seed installation ids already present for ids 0..count-1."""
     ids = [f"seed-{i:04d}" for i in range(count)]
     rows = session.exec(
-        select(Installation.installation_id).where(
-            Installation.installation_id.in_(ids)
+        select(col(Installation.installation_id)).where(
+            col(Installation.installation_id).in_(ids)
         )
     ).all()
     return set(rows)

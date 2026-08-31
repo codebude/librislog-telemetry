@@ -10,8 +10,8 @@ is handled by the CLI (``ltel clean``) before invoking it.
 
 import argparse
 
-from sqlalchemy import delete, func, inspect, select
-from sqlmodel import Session
+from sqlalchemy import delete
+from sqlmodel import Session, col, func, inspect, select
 
 from app.database import engine
 from app.models import Installation
@@ -25,16 +25,16 @@ def _counts(session: Session) -> tuple[int, int]:
     If the ``installation`` table does not exist yet (e.g. migrations have
     never been run), the database is treated as empty.
     """
-    if "installation" not in inspect(session.bind).get_table_names():
+    inspector = inspect(session.bind)
+    if inspector is None or "installation" not in inspector.get_table_names():
         return 0, 0
-    total = session.exec(select(func.count(Installation.installation_id))).scalar() or 0
+    total = session.exec(select(func.count(col(Installation.installation_id)))).one()
     seed = (
         session.exec(
-            select(func.count(Installation.installation_id)).where(
-                Installation.installation_id.like(f"{SEED_PREFIX}%")
+            select(func.count(col(Installation.installation_id))).where(
+                col(Installation.installation_id).like(f"{SEED_PREFIX}%")
             )
-        ).scalar()
-        or 0
+        ).one()
     )
     return seed, total
 
@@ -56,16 +56,16 @@ def main() -> None:
             return
 
         if args.seed:
-            result = session.execute(
+            result = session.exec(
                 delete(Installation).where(
-                    Installation.installation_id.like(f"{SEED_PREFIX}%")
+                    col(Installation.installation_id).like(f"{SEED_PREFIX}%")
                 )
             )
             session.commit()
             print(f"Deleted {result.rowcount} seeded installation(s)")
 
         elif args.all:
-            result = session.execute(delete(Installation))
+            result = session.exec(delete(Installation))
             session.commit()
             print(f"Deleted {result.rowcount} installation(s)")
 
