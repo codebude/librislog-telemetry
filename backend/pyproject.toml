@@ -29,6 +29,7 @@ dev = [
     "pytest>=9.0.3",
     "pytest-anyio>=0.0.0",
     "pytest-cov>=7.1.0",
+    "pytest-mock>=3.14.0",
 ]
 
 [tool.pytest.ini_options]
