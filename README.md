@@ -118,6 +118,7 @@ docker compose up -d
 | `LOG_LEVEL` | `INFO` | Logging verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
 | `RATE_LIMIT_PER_MINUTE` | `4` | Max telemetry requests per IP per minute before the endpoint returns `429`. The `.env.example` ships with `60`. |
 | `LOG_IP_MASK_OCTETS` | `1` | How many trailing IPv4 octets are masked in log output (`1` → `192.168.1.x`, `2` → `192.168.x.x`). The prefix stays visible so repeat offenders can still be spotted. |
+| `ENABLE_DOCS` | `true` | Whether to expose `/api/docs` (Swagger UI) and `/api/openapi.json`. Set to `false` in production to reduce the public attack surface — the endpoints then return `404`. |
 | `CORS_ORIGINS` | `["http://localhost:8001"]` | Allowed CORS origins, JSON array. |
 | `FORWARDED_ALLOW_IPS` | `*` | IPs (or `*`) trusted to send `X-Forwarded-For`/`X-Forwarded-Proto`. Set to your reverse-proxy IP or CIDR in production. |
 

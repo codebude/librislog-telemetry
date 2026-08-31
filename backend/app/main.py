@@ -36,8 +36,8 @@ app = FastAPI(
     description="Anonymous, aggregate telemetry API for LibrisLog.",
     version=_display_version,
     lifespan=lifespan,
-    openapi_url="/api/openapi.json",
-    docs_url="/api/docs",
+    openapi_url="/api/openapi.json" if settings.enable_docs else None,
+    docs_url="/api/docs" if settings.enable_docs else None,
     redoc_url=None,
 )
 

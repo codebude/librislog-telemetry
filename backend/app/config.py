@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # repeat offenders can still be spotted while the host part stays anonymous.
     log_ip_mask_octets: int = 1
     forwarded_allow_ips: str = "*"
+    # Whether to expose the interactive API docs (/api/docs) and the OpenAPI
+    # schema (/api/openapi.json). Disable in production to reduce the public
+    # attack surface — the endpoints then return 404.
+    enable_docs: bool = True
 
     @field_validator("log_ip_mask_octets")
     @classmethod
