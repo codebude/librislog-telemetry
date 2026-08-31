@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     # public and ingestion is intentionally unauthenticated (the client is
     # open source), so rate limiting is the primary spam defence.
     rate_limit_per_minute: int = 4
-    public_app_url: str = "http://localhost:8001"
     forwarded_allow_ips: str = "*"
 
 
