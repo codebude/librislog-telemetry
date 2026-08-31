@@ -47,8 +47,10 @@ The server:
   limiting but are never stored, and the server logs no access log — rate-limit
   warnings appear with the trailing octets masked (`192.168.1.x` by default,
   configurable via `LOG_IP_MASK_OCTETS`).
-- **Serves a public dashboard** at `/` showing total/active installations,
-  version distribution, operating systems, architectures and runtimes.
+- **Serves a public dashboard** at `/` showing total/active installations and
+  a daily activity chart. The version, operating system, architecture and
+  runtime breakdowns only cover installations that checked in during the last
+  30 days.
 
 ## Quick Start (local)
 

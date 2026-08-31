@@ -85,3 +85,34 @@ def test_stats_include_pruned_in_all_time_totals(client: TestClient, session: Se
     body = resp.json()
     assert body["total_installations"] == 2
     assert body["active_7d"] == 1
+
+
+def test_breakdowns_exclude_inactive_installations(client: TestClient, session: Session):
+    """Breakdown charts only count installations active within the last 30 days."""
+    now = utcnow()
+    _seed(session, "active-a", version="v1.0.0", os="Linux", runtime="docker", last_seen_at=now)
+    _seed(session, "active-b", version="v2.0.0", os="macOS", runtime="pipx", last_seen_at=now - timedelta(days=10))
+    # Stale: reported 60 days ago — must not appear in breakdowns.
+    _seed(session, "stale-c", version="v0.5.0", os="Windows", runtime="source", last_seen_at=now - timedelta(days=60))
+    session.commit()
+
+    resp = client.get("/api/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    # All-time + active counts include the stale row.
+    assert body["total_installations"] == 3
+    assert body["active_30d"] == 2
+
+    # Breakdowns exclude the stale installation entirely.
+    versions = {e["label"]: e["count"] for e in body["versions"]}
+    assert versions == {"v1.0.0": 1, "v2.0.0": 1}
+    assert "v0.5.0" not in versions
+
+    oss = {e["label"]: e["count"] for e in body["operating_systems"]}
+    assert oss == {"Linux": 1, "macOS": 1}
+    assert "Windows" not in oss
+
+    runtimes = {e["label"]: e["count"] for e in body["runtimes"]}
+    assert runtimes == {"docker": 1, "pipx": 1}
+    assert "source" not in runtimes

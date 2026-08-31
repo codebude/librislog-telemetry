@@ -152,25 +152,25 @@
 
       <div class="panel">
         <h2>Versions</h2>
-        <p class="desc">Which LibrisLog versions are in use right now.</p>
+        <p class="desc">LibrisLog versions among installations active in the last 30 days.</p>
         <div class="canvas-wrap"><canvas id="chart-versions"></canvas></div>
       </div>
 
       <div class="panel">
         <h2>Operating systems</h2>
-        <p class="desc">Platforms LibrisLog is run on.</p>
+        <p class="desc">Platforms of installations active in the last 30 days.</p>
         <div class="canvas-wrap"><canvas id="chart-os"></canvas></div>
       </div>
 
       <div class="panel">
         <h2>Architectures</h2>
-        <p class="desc">CPU architecture of the host machine.</p>
+        <p class="desc">CPU architecture of installations active in the last 30 days.</p>
         <div class="canvas-wrap"><canvas id="chart-arch"></canvas></div>
       </div>
 
       <div class="panel">
         <h2>Runtimes</h2>
-        <p class="desc">Python runtime and deployment method.</p>
+        <p class="desc">Python runtime / deployment method of installations active in the last 30 days.</p>
         <div class="canvas-wrap"><canvas id="chart-runtime"></canvas></div>
       </div>
     </div>
@@ -180,6 +180,7 @@
       <ul>
         <li><strong>No personal data.</strong> Each installation sends a random, anonymous ID plus its version, operating system, architecture and runtime. No IPs, no paths, no library contents are stored.</li>
         <li><strong>One row per installation.</strong> The database keeps a single row per installation that is updated on each check-in, so the dataset stays small and bounded — it never grows unboundedly.</li>
+        <li><strong>Breakdowns cover active installations.</strong> The versions, operating system, architecture and runtime charts only count installations that checked in during the last 30 days. Older, inactive installations are excluded (they are moved to a pruned table after a year without activity).</li>
         <li><strong>How to opt out.</strong> You can disable telemetry in LibrisLog's settings. If you do, this server never hears from your installation again.</li>
         <li><strong>This page is public.</strong> Only aggregate counts are shown, never individual installations.</li>
       </ul>

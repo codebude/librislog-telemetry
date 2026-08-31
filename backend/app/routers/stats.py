@@ -15,11 +15,17 @@ from app.time_utils import utcnow
 router = APIRouter(prefix="/api", tags=["stats"])
 
 
-def _count_group(session: Session, column) -> list[StatEntry]:
-    """Group by *column*, drop empties, sort by count descending."""
+def _count_group(session: Session, column, *, active_since) -> list[StatEntry]:
+    """Group *column* counts for installations active since *active_since*.
+
+    Only "active" installations (those that reported within the retention /
+    dashboard window) count toward the breakdowns; stale ones are excluded.
+    Drops empties, sorts by count descending.
+    """
     rows = session.exec(
         select(column, func.count(Installation.installation_id))
         .where(column != "")
+        .where(Installation.last_seen_at >= active_since)
         .group_by(column)
         .order_by(func.count(Installation.installation_id).desc())
     ).all()
@@ -70,9 +76,9 @@ async def get_stats(
         total_installations=int(total_installations),
         active_7d=int(active_7d),
         active_30d=int(active_30d),
-        versions=_count_group(session, Installation.version),
-        operating_systems=_count_group(session, Installation.os),
-        architectures=_count_group(session, Installation.architecture),
-        runtimes=_count_group(session, Installation.runtime),
+        versions=_count_group(session, Installation.version, active_since=cutoff),
+        operating_systems=_count_group(session, Installation.os, active_since=cutoff),
+        architectures=_count_group(session, Installation.architecture, active_since=cutoff),
+        runtimes=_count_group(session, Installation.runtime, active_since=cutoff),
         daily=daily,
     )
