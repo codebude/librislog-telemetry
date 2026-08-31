@@ -1,5 +1,6 @@
 """Tests for the telemetry ingestion endpoint."""
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
@@ -144,6 +145,19 @@ def test_health_endpoint(client: TestClient):
     body = resp.json()
     assert body["status"] == "healthy"
     assert body["checks"]["database_schema"]["status"] == "healthy"
+
+
+def test_unhandled_message_version_raises():
+    """An unknown message version in the router dispatch raises ValueError."""
+    from app.models import Installation
+    from app.routers.telemetry import _apply_version_specific
+
+    class FakePayload:
+        message_version = 99
+
+    inst = Installation(installation_id="x")
+    with pytest.raises(ValueError, match="Unhandled message version: 99"):
+        _apply_version_specific(inst, FakePayload())  # type: ignore[arg-type]
 
 
 # ── Strict per-version schema tests ──────────────────────────────────────────
