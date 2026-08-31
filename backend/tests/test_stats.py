@@ -116,3 +116,54 @@ def test_breakdowns_exclude_inactive_installations(client: TestClient, session: 
     runtimes = {e["label"]: e["count"] for e in body["runtimes"]}
     assert runtimes == {"docker": 1, "pipx": 1}
     assert "source" not in runtimes
+
+
+def test_new_install_and_longevity_stats(client: TestClient, session: Session):
+    """New installs (daily/monthly) and longevity buckets are computed."""
+    now = utcnow()
+    # 2 new installs this month, one 2 months old, one 4 months old.
+    _seed(session, "new-1", version="v1.0.0", os="Linux", runtime="docker",
+          first_seen_at=now - timedelta(days=1), last_seen_at=now - timedelta(days=1))
+    _seed(session, "new-2", version="v1.0.0", os="Linux", runtime="docker",
+          first_seen_at=now - timedelta(days=2), last_seen_at=now - timedelta(days=2))
+    _seed(session, "old-1", version="v1.0.0", os="Linux", runtime="docker",
+          first_seen_at=now - timedelta(days=60), last_seen_at=now - timedelta(days=5))
+    _seed(session, "old-2", version="v1.0.0", os="Linux", runtime="docker",
+          first_seen_at=now - timedelta(days=120), last_seen_at=now - timedelta(days=6))
+    session.commit()
+
+    resp = client.get("/api/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    # new_daily: 2 days have entries
+    new_daily_total = sum(e["count"] for e in body["new_daily"])
+    assert new_daily_total == 2
+
+    # new_monthly: current month has 2, plus older months
+    months = {e["month"]: e["count"] for e in body["new_monthly"]}
+    assert sum(months.values()) == 4
+
+    # longevity: all 4 are active (last seen within 30d)
+    longevity = {e["label"]: e["count"] for e in body["longevity"]}
+    assert sum(longevity.values()) == 4
+    assert longevity["< 1 week"] == 2
+
+    # version_mix: only active installs appear
+    assert body["version_mix"], "version mix should have entries"
+
+
+def test_version_mix_has_entries(client: TestClient, session: Session):
+    now = utcnow()
+    _seed(session, "a", version="v1.2.0", os="Linux", runtime="docker", last_seen_at=now)
+    _seed(session, "b", version="v1.1.0", os="macOS", runtime="pipx", last_seen_at=now)
+    session.commit()
+
+    resp = client.get("/api/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert len(body["version_mix"]) == 1
+    day = body["version_mix"][0]
+    versions = {e["label"]: e["count"] for e in day["versions"]}
+    assert versions == {"v1.2.0": 1, "v1.1.0": 1}

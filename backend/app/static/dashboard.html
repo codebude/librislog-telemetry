@@ -145,9 +145,33 @@
 
     <div class="grid">
       <div class="panel hero-panel">
-        <h2>Active installations</h2>
-        <p class="desc">Distinct installations that reported in each of the last 30 days.</p>
+        <h2>Daily activity</h2>
+        <p class="desc">Active installations per day over the last 30 days.</p>
         <div class="canvas-wrap"><canvas id="chart-daily"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <h2>New installs per day</h2>
+        <p class="desc">Installations first seen each day over the last 30 days.</p>
+        <div class="canvas-wrap"><canvas id="chart-new-daily"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <h2>New installs per month</h2>
+        <p class="desc">Installations first seen each month over the last 12 months.</p>
+        <div class="canvas-wrap"><canvas id="chart-new-monthly"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <h2>Install longevity</h2>
+        <p class="desc">Active installations by how long they have existed.</p>
+        <div class="canvas-wrap"><canvas id="chart-longevity"></canvas></div>
+      </div>
+
+      <div class="panel hero-panel">
+        <h2>Version mix</h2>
+        <p class="desc">Version distribution of active installations per day over the last 30 days.</p>
+        <div class="canvas-wrap"><canvas id="chart-version-mix"></canvas></div>
       </div>
 
       <div class="panel">
@@ -209,27 +233,81 @@
 
       const days = data.daily.map(d => d.date);
       const counts = data.daily.map(d => d.count);
-      new Chart(document.getElementById('chart-daily'), {
-        type: 'line',
-        data: {
-          labels: days,
-          datasets: [{
-            label: 'Installations',
-            data: counts,
-            borderColor: '#38bdf8',
-            backgroundColor: 'rgba(56, 189, 248, 0.15)',
-            fill: true,
-            tension: 0.3,
-            pointRadius: 2
-          }]
-        },
-        options: chartOpts()
-      });
+      barChart('chart-daily', days, counts, 'Active installations', '#38bdf8');
+
+      const newDays = data.new_daily.map(d => d.date);
+      const newCounts = data.new_daily.map(d => d.count);
+      barChart('chart-new-daily', newDays, newCounts, 'New installs', '#34d399');
+
+      const months = data.new_monthly.map(m => m.month);
+      const monthCounts = data.new_monthly.map(m => m.count);
+      barChart('chart-new-monthly', months, monthCounts, 'New installs', '#fbbf24');
+
+      const longLabels = data.longevity.map(e => e.label);
+      const longCounts = data.longevity.map(e => e.count);
+      barChart('chart-longevity', longLabels, longCounts, 'Installations', '#a78bfa');
+
+      versionMix(data.version_mix);
 
       donut('chart-versions', data.versions);
       donut('chart-os', data.operating_systems);
       donut('chart-arch', data.architectures);
       donut('chart-runtime', data.runtimes);
+    }
+
+    function barChart(id, labels, values, label, color) {
+      new Chart(document.getElementById(id), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: label,
+            data: values,
+            backgroundColor: color,
+            borderRadius: 4
+          }]
+        },
+        options: chartOpts()
+      });
+    }
+
+    function versionMix(entries) {
+      const labels = entries.map(e => e.date);
+      const versions = new Set();
+      entries.forEach(e => e.versions.forEach(v => versions.add(v.label)));
+      const versionList = Array.from(versions);
+      const datasets = versionList.map((ver, i) => ({
+        label: ver,
+        data: entries.map(e => {
+          const hit = e.versions.find(v => v.label === ver);
+          return hit ? hit.count : 0;
+        }),
+        backgroundColor: PALETTE[i % PALETTE.length],
+        borderRadius: 0
+      }));
+      new Chart(document.getElementById('chart-version-mix'), {
+        type: 'bar',
+        data: { labels: labels, datasets: datasets },
+        options: Object.assign({}, chartOpts(), {
+          plugins: {
+            legend: { labels: { color: '#e2e8f0', boxWidth: 14 } }
+          },
+          scales: {
+            x: { stacked: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
+            y: {
+              stacked: true,
+              ticks: {
+                color: '#94a3b8',
+                precision: 0,
+                callback: function (value) {
+                  return Number.isInteger(Number(value)) ? value : '';
+                }
+              },
+              grid: { color: 'rgba(148,163,184,0.1)' }
+            }
+          }
+        })
+      });
     }
 
     function donut(id, entries) {
@@ -274,7 +352,17 @@
         plugins: { legend: { labels: { color: '#e2e8f0' } } },
         scales: {
           x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } },
-          y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.1)' } }
+          y: {
+            ticks: {
+              color: '#94a3b8',
+              precision: 0,
+              callback: function (value) {
+                // Installations are whole numbers, never show decimals.
+                return Number.isInteger(Number(value)) ? value : '';
+              }
+            },
+            grid: { color: 'rgba(148,163,184,0.1)' }
+          }
         }
       };
     }

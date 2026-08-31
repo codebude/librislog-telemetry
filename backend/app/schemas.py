@@ -121,6 +121,34 @@ class DailyStat(BaseModel):
     count: int
 
 
+class NewInstallDaily(BaseModel):
+    """Number of installations first seen on a given day."""
+
+    date: str
+    count: int
+
+
+class NewInstallMonthly(BaseModel):
+    """Number of installations first seen in a given month (YYYY-MM)."""
+
+    month: str
+    count: int
+
+
+class LongevityEntry(BaseModel):
+    """A bucket of active installations by how long they've existed."""
+
+    label: str
+    count: int
+
+
+class VersionMixEntry(BaseModel):
+    """Version distribution on a given day."""
+
+    date: str
+    versions: list[StatEntry]
+
+
 class StatsOut(BaseModel):
     """Aggregate statistics consumed by the public dashboard."""
 
@@ -132,4 +160,8 @@ class StatsOut(BaseModel):
     architectures: list[StatEntry]
     runtimes: list[StatEntry]
     daily: list[DailyStat]
+    new_daily: list[NewInstallDaily]
+    new_monthly: list[NewInstallMonthly]
+    longevity: list[LongevityEntry]
+    version_mix: list[VersionMixEntry]
     server_version: str
