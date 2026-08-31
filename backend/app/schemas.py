@@ -11,7 +11,20 @@ from typing import Annotated, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-_OS_ALIASES = {
+def _build_aliases(mapping: dict[str, str]) -> dict[str, str]:
+    """Build a case-insensitive alias map, including canonical values.
+
+    Every canonical value is also added (lowercased -> itself) so any casing of
+    a known value resolves to the canonical form. Unknown values fall through
+    the validator unchanged.
+    """
+    aliases = dict(mapping)
+    for canonical in mapping.values():
+        aliases.setdefault(canonical.lower(), canonical)
+    return aliases
+
+
+_OS_ALIASES = _build_aliases({
     "macos": "macOS",
     "osx": "macOS",
     "darwin": "macOS",
@@ -19,15 +32,15 @@ _OS_ALIASES = {
     "win32": "Windows",
     "linux": "Linux",
     "linux-gnu": "Linux",
-}
+})
 
-_ARCH_ALIASES = {
+_ARCH_ALIASES = _build_aliases({
     "x86_64": "x64",
     "amd64": "x64",
     "arm64": "ARM64",
     "aarch64": "ARM64",
     "arm": "ARM",
-}
+})
 
 
 class TelemetryCommonMixin:

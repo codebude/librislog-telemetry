@@ -91,6 +91,30 @@ def test_os_alias_normalization(client: TestClient, session: Session):
     assert row.architecture == "ARM64"
 
 
+def test_os_arch_case_insensitive_canonicalization(client: TestClient, session: Session):
+    """Case-variants of known values map to the canonical form."""
+    resp = client.post(
+        "/api/telemetry",
+        json=_payload(os="LINUX", architecture="X64"),
+    )
+    assert resp.status_code == 200
+    row = session.get(Installation, "inst-001")
+    assert row.os == "Linux"
+    assert row.architecture == "x64"
+
+
+def test_unknown_os_arch_passes_through(client: TestClient, session: Session):
+    """Values not in the alias map are kept as-is (stripped, case preserved)."""
+    resp = client.post(
+        "/api/telemetry",
+        json=_payload(os="  Fedora ", architecture="RISC-V"),
+    )
+    assert resp.status_code == 200
+    row = session.get(Installation, "inst-001")
+    assert row.os == "Fedora"
+    assert row.architecture == "RISC-V"
+
+
 def test_ingest_resurrects_pruned_installation(client: TestClient, session: Session):
     """A pruned installation that checks in again moves back to live, so it is
     not double-counted in the all-time total installations metric."""
