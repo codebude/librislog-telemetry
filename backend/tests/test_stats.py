@@ -28,7 +28,8 @@ def test_empty_stats(client: TestClient):
     assert resp.status_code == 200
     body = resp.json()
     assert body["total_installations"] == 0
-    assert body["active_24h"] == 0
+    assert body["active_7d"] == 0
+    assert body["active_30d"] == 0
 
 
 def test_stats_aggregation(client: TestClient, session: Session):
@@ -44,7 +45,6 @@ def test_stats_aggregation(client: TestClient, session: Session):
     body = resp.json()
 
     assert body["total_installations"] == 4
-    assert body["active_24h"] == 2
     assert body["active_7d"] == 3
     assert body["active_30d"] == 4
 
@@ -84,4 +84,4 @@ def test_stats_include_pruned_in_all_time_totals(client: TestClient, session: Se
     assert resp.status_code == 200
     body = resp.json()
     assert body["total_installations"] == 2
-    assert body["active_24h"] == 1
+    assert body["active_7d"] == 1

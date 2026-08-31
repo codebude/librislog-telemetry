@@ -49,8 +49,7 @@ async def get_stats(
             .where(Installation.last_seen_at >= cutoff)
         ).scalar() or 0
 
-    # Active installations within 24h / 7d / 30d windows.
-    active_24h = _active(24)
+    # Active installations within 7d / 30d windows.
     active_7d = _active(24 * 7)
     active_30d = _active(24 * 30)
 
@@ -69,7 +68,6 @@ async def get_stats(
 
     return StatsOut(
         total_installations=int(total_installations),
-        active_24h=int(active_24h),
         active_7d=int(active_7d),
         active_30d=int(active_30d),
         versions=_count_group(session, Installation.version),

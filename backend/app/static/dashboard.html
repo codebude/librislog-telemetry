@@ -139,7 +139,6 @@
 
     <div class="cards" id="cards">
       <div class="card"><div class="label">Total installations</div><div class="value" id="total-inst">–</div><div class="hint">Distinct installations ever seen</div></div>
-      <div class="card"><div class="label">Active last 24h</div><div class="value" id="active-24h">–</div><div class="hint">Checked in during the last day</div></div>
       <div class="card"><div class="label">Active last 7d</div><div class="value" id="active-7d">–</div><div class="hint">Checked in during the last week</div></div>
       <div class="card"><div class="label">Active last 30d</div><div class="value" id="active-30d">–</div><div class="hint">Checked in during the last month</div></div>
     </div>
@@ -202,7 +201,6 @@
 
     function render(data) {
       document.getElementById('total-inst').textContent = data.total_installations.toLocaleString();
-      document.getElementById('active-24h').textContent = data.active_24h.toLocaleString();
       document.getElementById('active-7d').textContent = data.active_7d.toLocaleString();
       document.getElementById('active-30d').textContent = data.active_30d.toLocaleString();
       document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleString();
