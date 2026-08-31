@@ -30,7 +30,6 @@ def test_ingest_new_installation(client: TestClient, session: Session):
     assert row is not None
     assert row.version == "v1.2.3"
     assert row.os == "Linux"
-    assert row.event_count == 1
     assert row.message_version == 1
     assert row.first_seen_at == row.last_seen_at
 
@@ -61,7 +60,6 @@ def test_ingest_updates_existing(client: TestClient, session: Session):
     assert len(rows) == 1
     row = rows[0]
     assert row.version == "v1.1.0"
-    assert row.event_count == 2
     assert (row.last_seen_at - row.first_seen_at).total_seconds() < 1
 
 
@@ -91,6 +89,29 @@ def test_os_alias_normalization(client: TestClient, session: Session):
     row = session.get(Installation, "inst-001")
     assert row.os == "macOS"
     assert row.architecture == "ARM64"
+
+
+def test_ingest_resurrects_pruned_installation(client: TestClient, session: Session):
+    """A pruned installation that checks in again moves back to live, so it is
+    not double-counted in the all-time total installations metric."""
+    from datetime import timedelta
+    from app.models import PrunedInstallation
+    from app.time_utils import utcnow
+
+    session.add(
+        PrunedInstallation(
+            installation_id="inst-001",
+            pruned_at=utcnow() - timedelta(days=40),
+        )
+    )
+    session.commit()
+
+    resp = client.post("/api/telemetry", json=_payload())
+    assert resp.status_code == 200
+
+    row = session.get(Installation, "inst-001")
+    assert row is not None
+    assert session.get(PrunedInstallation, "inst-001") is None
 
 
 def test_health_endpoint(client: TestClient):

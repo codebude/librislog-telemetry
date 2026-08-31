@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     # schema (/api/openapi.json). Disable in production to reduce the public
     # attack surface — the endpoints then return 404.
     enable_docs: bool = True
+    # Retention: installations not seen for this many days are moved to the
+    # pruned table (their IDs are kept, so the all-time "total installations"
+    # metric stays exact). Defaults to 365 — installations that haven't
+    # reported in a year are considered abandoned.
+    prune_after_days: int = 365
+    # How often the background retention job runs.
+    prune_interval_hours: int = 24
 
     @field_validator("log_ip_mask_octets")
     @classmethod

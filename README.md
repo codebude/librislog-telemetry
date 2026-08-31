@@ -35,6 +35,11 @@ The server:
 
 - **Stores one row per installation** (upsert on each check-in), so the dataset
   stays small and bounded — it never grows unboundedly.
+- **Prunes stale installations** — a background retention job (every
+  `PRUNE_INTERVAL_HOURS`) moves installations not seen for `PRUNE_AFTER_DAYS`
+  (default 365, i.e. abandoned for a year) to a pruned table. Their IDs are
+  kept, so the all-time total remains exact — and if a pruned installation
+  checks in again, it moves back to the live table without being counted twice.
 - **Rejects invalid payloads** with strict schema validation (422), and
   **rate-limits per IP** to keep bots out.
 - **Never stores personal data** — no IPs, no paths, no library contents. Just
@@ -52,6 +57,7 @@ uv sync
 uv run ltel migrate        # create the SQLite schema
 uv run ltel seed --count 25  # optional: fake data for dashboard development
 uv run ltel clean          # remove seeded data (asks before deleting)
+uv run ltel prune --days 365  # move stale installations to the pruned table
 uv run ltel run            # http://127.0.0.1:8001
 ```
 
@@ -119,6 +125,8 @@ docker compose up -d
 | `RATE_LIMIT_PER_MINUTE` | `4` | Max telemetry requests per IP per minute before the endpoint returns `429`. The `.env.example` ships with `60`. |
 | `LOG_IP_MASK_OCTETS` | `1` | How many trailing IPv4 octets are masked in log output (`1` → `192.168.1.x`, `2` → `192.168.x.x`). The prefix stays visible so repeat offenders can still be spotted. |
 | `ENABLE_DOCS` | `true` | Whether to expose `/api/docs` (Swagger UI) and `/api/openapi.json`. Set to `false` in production to reduce the public attack surface — the endpoints then return `404`. |
+| `PRUNE_AFTER_DAYS` | `365` | Installations not seen for this many days are moved to the pruned table by the retention job. Their IDs are kept, so the all-time total stays exact. |
+| `PRUNE_INTERVAL_HOURS` | `24` | How often the background retention job runs. |
 | `CORS_ORIGINS` | `["http://localhost:8001"]` | Allowed CORS origins, JSON array. |
 | `FORWARDED_ALLOW_IPS` | `*` | IPs (or `*`) trusted to send `X-Forwarded-For`/`X-Forwarded-Proto`. Set to your reverse-proxy IP or CIDR in production. |
 
@@ -143,9 +151,10 @@ would be public anyway. Spam protection instead relies on:
 
 1. **Strict schema validation** — only well-formed heartbeats are stored.
 2. **Per-IP rate limiting** — configurable via `RATE_LIMIT_PER_MINUTE`.
-3. **Bounded dataset** — one row per installation, so even a flood of fake
-   installation IDs only creates empty rows (cleaned by retention, and the
-   dashboard only counts non-empty fields).
+3. **Bounded dataset** — one row per installation (upserted per check-in), so
+   even a flood of fake installation IDs only creates one mostly-empty row per
+   unique ID instead of one row per request. The dashboard only counts
+   non-empty fields.
 
 
 ## Development

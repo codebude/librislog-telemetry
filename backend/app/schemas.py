@@ -112,7 +112,6 @@ class StatsOut(BaseModel):
     """Aggregate statistics consumed by the public dashboard."""
 
     total_installations: int
-    total_events: int
     active_24h: int
     active_7d: int
     active_30d: int

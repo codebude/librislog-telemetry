@@ -49,7 +49,7 @@ async def health(
         if inspector is None:
             raise RuntimeError("Engine binding returned no inspector")
         existing = set(inspector.get_table_names())
-        missing = {"installation"} - existing
+        missing = {"installation", "pruned_installation"} - existing
         if missing:
             schema_ok = False
             schema_detail = f"Missing tables: {', '.join(sorted(missing))}"

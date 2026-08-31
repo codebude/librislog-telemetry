@@ -5,7 +5,7 @@ from datetime import timedelta
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app.models import Installation
+from app.models import Installation, PrunedInstallation
 from app.time_utils import utcnow
 
 
@@ -16,7 +16,6 @@ def _seed(session: Session, installation_id: str, **overrides) -> None:
         "os": "Linux",
         "architecture": "x64",
         "runtime": "docker",
-        "event_count": 1,
         "first_seen_at": utcnow(),
         "last_seen_at": utcnow(),
     }
@@ -29,7 +28,6 @@ def test_empty_stats(client: TestClient):
     assert resp.status_code == 200
     body = resp.json()
     assert body["total_installations"] == 0
-    assert body["total_events"] == 0
     assert body["active_24h"] == 0
 
 
@@ -68,3 +66,22 @@ def test_stats_dashboard_page(client: TestClient):
     assert resp.status_code == 200
     assert "LibrisLog" in resp.text
     assert "chart-daily" in resp.text
+
+
+def test_stats_include_pruned_in_all_time_totals(client: TestClient, session: Session):
+    """Pruned rows still count toward the all-time installation total."""
+    now = utcnow()
+    _seed(session, "a", version="v1.0.0", os="Linux", runtime="docker", last_seen_at=now)
+    session.add(
+        PrunedInstallation(
+            installation_id="old-b",
+            pruned_at=now - timedelta(days=40),
+        )
+    )
+    session.commit()
+
+    resp = client.get("/api/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total_installations"] == 2
+    assert body["active_24h"] == 1

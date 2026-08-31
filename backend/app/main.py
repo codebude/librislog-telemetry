@@ -1,5 +1,6 @@
 """FastAPI application factory and middleware setup."""
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -19,11 +20,47 @@ logger = logging.getLogger(__name__)
 configure_logging(settings.log_level, mask_octets=settings.log_ip_mask_octets)
 
 
+async def _periodic_prune(interval_hours: int) -> None:
+    """Periodically move stale installations to the pruned table.
+
+    Runs every *interval_hours* hours. Uses the app engine directly so it works
+    independently of request-scoped sessions.
+    """
+    from app.services.retention import prune_stale_installations
+    from app.database import get_session
+
+    loop = asyncio.get_running_loop()
+    failures = 0
+    while True:
+        await asyncio.sleep(interval_hours * 3600)
+        try:
+            with next(get_session()) as session:
+                pruned = await loop.run_in_executor(
+                    None, prune_stale_installations, session, settings.prune_after_days
+                )
+                if pruned:
+                    logger.info("Retention: pruned %d stale installation(s)", pruned)
+            failures = 0
+        except Exception as exc:
+            failures += 1
+            if failures >= 3:
+                logger.error("Retention job failed %d times consecutively: %s", failures, exc)
+            else:
+                logger.warning("Retention job failed (%d): %s", failures, exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan: create the data directory."""
+    """Application lifespan: create the data directory and start the prune job."""
     Path(settings.data_dir).mkdir(parents=True, exist_ok=True)
+
+    prune_task = asyncio.create_task(_periodic_prune(settings.prune_interval_hours))
     yield
+    prune_task.cancel()
+    try:
+        await prune_task
+    except asyncio.CancelledError:
+        pass
 
 
 if __git_sha__ != "unknown" and __version__.find(__git_sha__[:7]) == -1:

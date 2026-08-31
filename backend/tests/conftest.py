@@ -9,6 +9,8 @@ from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+# Keep the rate limiter from throttling tests that issue many telemetry POSTs.
+os.environ.setdefault("RATE_LIMIT_PER_MINUTE", "1000")
 
 from app.main import app  # noqa: E402
 from app.database import get_session  # noqa: E402

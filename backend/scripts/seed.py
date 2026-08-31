@@ -53,7 +53,6 @@ def main(count: int) -> None:
                     os=random.choice(_OS),
                     architecture=random.choice(_ARCHS),
                     runtime=random.choice(_RUNTIMES),
-                    event_count=random.randint(1, 400),
                     first_seen_at=first_seen,
                     last_seen_at=last_seen,
                 )

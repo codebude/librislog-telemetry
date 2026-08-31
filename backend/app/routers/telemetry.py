@@ -16,7 +16,7 @@ from sqlmodel import Session
 
 from app.config import settings
 from app.database import get_session
-from app.models import Installation
+from app.models import Installation, PrunedInstallation
 from app.schemas import TelemetryIn, TelemetryInV1, TelemetryOut
 from app.time_utils import utcnow
 
@@ -78,15 +78,20 @@ async def ingest_telemetry(
     existing = session.get(Installation, payload.installation_id)
 
     if existing is None:
+        # If this installation was pruned for inactivity, resurrect it: move it
+        # back to the live table so it is not double-counted in the all-time
+        # "total installations" metric.
+        pruned = session.get(PrunedInstallation, payload.installation_id)
         existing = Installation(
             installation_id=payload.installation_id,
-            event_count=1,
             first_seen_at=now,
             last_seen_at=now,
         )
         _apply_common(existing, payload)
         _apply_version_specific(existing, payload)
         session.add(existing)
+        if pruned is not None:
+            session.delete(pruned)
         logger.info(
             "New installation registered (%s, message v%s): %s",
             payload.installation_id,
@@ -96,7 +101,6 @@ async def ingest_telemetry(
     else:
         _apply_common(existing, payload)
         _apply_version_specific(existing, payload)
-        existing.event_count += 1
         existing.last_seen_at = now
 
     session.commit()

@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlmodel import Session
 
 from app.database import get_session
-from app.models import Installation
+from app.models import Installation, PrunedInstallation
 from app.schemas import DailyStat, StatEntry, StatsOut
 from app.time_utils import utcnow
 
@@ -26,6 +26,13 @@ def _count_group(session: Session, column) -> list[StatEntry]:
     return [StatEntry(label=str(label), count=int(count)) for label, count in rows]
 
 
+def _total_installations(session: Session) -> int:
+    """All-time installation count: live rows plus pruned tombstones."""
+    live = session.exec(select(func.count(Installation.installation_id))).scalar() or 0
+    pruned = session.exec(select(func.count(PrunedInstallation.installation_id))).scalar() or 0
+    return int(live + pruned)
+
+
 @router.get("/stats", response_model=StatsOut)
 async def get_stats(
     session: Annotated[Session, Depends(get_session)],
@@ -33,13 +40,7 @@ async def get_stats(
     """Return aggregate statistics for the public dashboard."""
     now = utcnow()
 
-    total_installations = session.exec(
-        select(func.count(Installation.installation_id))
-    ).scalar() or 0
-
-    total_events = session.exec(
-        select(func.coalesce(func.sum(Installation.event_count), 0))
-    ).scalar() or 0
+    total_installations = _total_installations(session)
 
     def _active(hours: int) -> int:
         cutoff = now - timedelta(hours=hours)
@@ -68,7 +69,6 @@ async def get_stats(
 
     return StatsOut(
         total_installations=int(total_installations),
-        total_events=int(total_events),
         active_24h=int(active_24h),
         active_7d=int(active_7d),
         active_30d=int(active_30d),

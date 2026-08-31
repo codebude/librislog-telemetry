@@ -3,7 +3,7 @@ python = "../.venv"
 python-version = "3.14"
 
 [[overrides]]
-include = ["alembic/versions", "scripts"]
+include = ["alembic/versions", "scripts", "app/services"]
 
 [overrides.rules]
 possibly-missing-submodule = "ignore"

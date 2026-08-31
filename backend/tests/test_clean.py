@@ -12,7 +12,6 @@ def _add(session: Session, installation_id: str) -> None:
         Installation(
             installation_id=installation_id,
             version="v1.0.0",
-            event_count=1,
             first_seen_at=utcnow(),
             last_seen_at=utcnow(),
         )

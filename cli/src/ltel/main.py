@@ -67,6 +67,15 @@ def clean():
     cmd_clean()
 
 
+@app.command("prune")
+def prune(
+    days: int | None = typer.Option(None, "--days", help="Prune installations not seen for N days (default: PRUNE_AFTER_DAYS)"),
+):
+    """Move stale installations to the pruned table (all-time totals preserved)."""
+    from ltel.backend import cmd_prune
+    cmd_prune(days=days)
+
+
 @test_app.command("backend")
 def test_backend():
     """Run backend pytest with coverage."""

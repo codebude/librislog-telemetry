@@ -12,7 +12,6 @@ def _add_seed(session: Session, index: int) -> None:
         Installation(
             installation_id=f"seed-{index:04d}",
             version="v1.0.0",
-            event_count=1,
             first_seen_at=utcnow(),
             last_seen_at=utcnow(),
         )
@@ -35,7 +34,6 @@ def test_existing_ids_does_not_include_non_seed(session: Session):
         Installation(
             installation_id="real-install",
             version="v1.0.0",
-            event_count=1,
             first_seen_at=utcnow(),
             last_seen_at=utcnow(),
         )

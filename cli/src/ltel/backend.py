@@ -110,3 +110,17 @@ def cmd_clean() -> None:
         raise typer.Exit()
     _run_clean_script(["--all"])
     console.print(f"[green]Wiped the entire database ({total_count} rows).[/green]")
+
+
+def cmd_prune(days: int | None = None) -> None:
+    """Move stale installations (not seen for *days*) to the pruned table.
+
+    Keeps their IDs and event counts, so all-time totals stay exact. Defaults
+    to ``PRUNE_AFTER_DAYS`` (365).
+    """
+    args = ["python", "scripts/prune.py"]
+    if days is not None:
+        args.append(str(days))
+    code = _run_uv(args)
+    if code != 0:
+        raise typer.Exit(code=code)
