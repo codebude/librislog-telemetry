@@ -1,5 +1,23 @@
 # librislog-telemetry
 
+<p align="center">
+  <a href="#what-it-does">📚 What it does</a>
+  &nbsp;·&nbsp;
+  <a href="#quick-start-local">Quick Start</a>
+  &nbsp;·&nbsp;
+  <a href="#api">API Reference</a>
+  &nbsp;·&nbsp;
+  <a href="#docker-compose-setup--configuration">Configuration</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/codebude/librislog-telemetry/actions/workflows/tests.yml"><img src="https://github.com/codebude/librislog-telemetry/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/codebude/librislog-telemetry/actions/workflows/docker.yml"><img src="https://github.com/codebude/librislog-telemetry/actions/workflows/docker.yml/badge.svg" alt="Docker Build"></a>
+  <img src="https://img.shields.io/badge/python-3.14-%233776AB?logo=python" alt="Python">
+  <img src="https://img.shields.io/badge/FastAPI-0.141-%23009688?logo=fastapi" alt="FastAPI">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+</p>
+
 Minimal, open source and transparent telemetry server for [LibrisLog](https://github.com/codebude/librislog).
 
 > `docker compose up -d` → anonymous, aggregate usage statistics for your
