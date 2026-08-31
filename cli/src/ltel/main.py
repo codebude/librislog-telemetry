@@ -60,6 +60,13 @@ def seed(
     cmd_seed(count)
 
 
+@app.command("clean")
+def clean():
+    """Remove seeded test data (or wipe the DB if seed rows can't be identified)."""
+    from ltel.backend import cmd_clean
+    cmd_clean()
+
+
 @test_app.command("backend")
 def test_backend():
     """Run backend pytest with coverage."""

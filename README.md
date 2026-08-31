@@ -51,6 +51,7 @@ The server:
 uv sync
 uv run ltel migrate        # create the SQLite schema
 uv run ltel seed --count 25  # optional: fake data for dashboard development
+uv run ltel clean          # remove seeded data (asks before deleting)
 uv run ltel run            # http://127.0.0.1:8001
 ```
 
