@@ -11,12 +11,11 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
-from sqlalchemy import select
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from app.config import settings
 from app.database import get_session
-from app.models import Installation, PrunedInstallation
+from app.models import DailyActivity, Installation, PrunedInstallation
 from app.schemas import TelemetryIn, TelemetryInV1, TelemetryOut
 from app.time_utils import utcnow
 
@@ -76,6 +75,20 @@ async def ingest_telemetry(
     """Record (or update) one installation's telemetry heartbeat."""
     now = utcnow()
     existing = session.get(Installation, payload.installation_id)
+
+    # Record this installation as active today (one row per install per day).
+    today = now.date().isoformat()
+    activity = session.exec(
+        select(DailyActivity).where(
+            col(DailyActivity.installation_id) == payload.installation_id,
+            col(DailyActivity.activity_date) == today,
+        )
+    ).first()
+    if activity is None:
+        session.add(DailyActivity(
+            installation_id=payload.installation_id,
+            activity_date=today,
+        ))
 
     if existing is None:
         # If this installation was pruned for inactivity, resurrect it: move it

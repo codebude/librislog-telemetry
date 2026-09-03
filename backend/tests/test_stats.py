@@ -5,7 +5,7 @@ from datetime import timedelta
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app.models import Installation, PrunedInstallation
+from app.models import DailyActivity, Installation, PrunedInstallation
 from app.time_utils import utcnow
 
 
@@ -21,6 +21,9 @@ def _seed(session: Session, installation_id: str, **overrides) -> None:
     }
     data.update(overrides)
     session.add(Installation(**data))
+    # Mirror the ingest behaviour: one DailyActivity row per day the install pings.
+    activity_date = data["last_seen_at"].date().isoformat()
+    session.add(DailyActivity(installation_id=installation_id, activity_date=activity_date))
 
 
 def test_empty_stats(client: TestClient):
@@ -66,6 +69,14 @@ def test_stats_dashboard_page(client: TestClient):
     assert resp.status_code == 200
     assert "LibrisLog" in resp.text
     assert "chart-daily" in resp.text
+    assert 'href="/favicon.ico"' in resp.text
+
+
+def test_favicon_served(client: TestClient):
+    resp = client.get("/favicon.ico")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "image/svg+xml"
+    assert resp.content.startswith(b"<svg")
 
 
 def test_stats_include_pruned_in_all_time_totals(client: TestClient, session: Session):
@@ -167,3 +178,30 @@ def test_version_mix_has_entries(client: TestClient, session: Session):
     day = body["version_mix"][0]
     versions = {e["label"]: e["count"] for e in day["versions"]}
     assert versions == {"v1.2.0": 1, "v1.1.0": 1}
+
+
+def test_daily_activity_counts_each_ping_day(client: TestClient, session: Session):
+    """An installation that pings on multiple days is counted on each day.
+
+    This is the core regression test for the daily-active chart: it must count
+    installations that were active *on* a day, not installations whose most
+    recent ping was on that day.
+    """
+    from app.models import DailyActivity
+
+    now = utcnow()
+    today = now.date().isoformat()
+    yesterday = (now - timedelta(days=1)).date().isoformat()
+    _seed(session, "pinger", last_seen_at=now)
+    session.add(DailyActivity(installation_id="pinger", activity_date=yesterday))
+    # yesterday-only pinged just yesterday.
+    _seed(session, "yesterday-only", last_seen_at=now - timedelta(days=1))
+    session.commit()
+
+    resp = client.get("/api/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    by_date = {e["date"]: e["count"] for e in body["daily"]}
+    assert by_date.get(yesterday) == 2  # pinger + yesterday-only
+    assert by_date.get(today) == 1      # only pinger
