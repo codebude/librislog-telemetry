@@ -1,11 +1,11 @@
-"""Retention: move stale installations to the pruned table."""
+"""Retention: move stale installations to the pruned table and purge old daily activity."""
 
 import logging
 from datetime import timedelta
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, delete, select
 
-from app.models import Installation, PrunedInstallation
+from app.models import DailyActivity, Installation, PrunedInstallation
 from app.time_utils import utcnow
 
 logger = logging.getLogger(__name__)
@@ -42,3 +42,19 @@ def prune_stale_installations(session: Session, *, older_than_days: int) -> int:
 
     session.commit()
     return len(stale)
+
+
+def prune_stale_daily_activity(session: Session, *, keep_days: int) -> int:
+    """Delete daily activity rows older than *keep_days*.
+
+    The dashboard only shows the last 30 days of daily activity, so older rows
+    can be dropped to keep the table small. Returns the number of rows deleted.
+    """
+    cutoff = (utcnow() - timedelta(days=keep_days)).date().isoformat()
+    result = session.exec(
+        delete(DailyActivity).where(col(DailyActivity.activity_date) < cutoff)
+    )
+    session.commit()
+    if result.rowcount:
+        logger.info("Pruned %d stale daily-activity row(s)", result.rowcount)
+    return int(result.rowcount)

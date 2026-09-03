@@ -13,7 +13,7 @@ from datetime import timedelta
 from sqlmodel import Session, col, select
 
 from app.database import engine
-from app.models import Installation
+from app.models import DailyActivity, Installation
 from app.time_utils import utcnow
 
 _VERSIONS = ["v0.9.0", "v1.0.0", "v1.0.1", "v1.1.0", "v1.2.0"]
@@ -46,9 +46,10 @@ def main(count: int) -> None:
                 first_seen + timedelta(days=random.randint(0, 60), hours=random.randint(0, 23)),
                 now,
             )
+            install_id = f"seed-{i:04d}"
             session.add(
                 Installation(
-                    installation_id=f"seed-{i:04d}",
+                    installation_id=install_id,
                     version=random.choice(_VERSIONS),
                     os=random.choice(_OS),
                     architecture=random.choice(_ARCHS),
@@ -57,6 +58,16 @@ def main(count: int) -> None:
                     last_seen_at=last_seen,
                 )
             )
+            # Mirror ingest: add daily-activity rows for each day this install pings.
+            day = last_seen.date()
+            for offset in range(0, random.randint(1, min(14, (now.date() - day).days + 1))):
+                activity_date = (now - timedelta(days=offset)).date().isoformat()
+                session.add(
+                    DailyActivity(
+                        installation_id=install_id,
+                        activity_date=activity_date,
+                    )
+                )
             added += 1
         session.commit()
     print(f"Seeded {added} new installation(s) ({count - added} already present)")

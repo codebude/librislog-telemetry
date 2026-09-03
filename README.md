@@ -52,7 +52,10 @@ extending the union in `schemas.py`, and adding a dispatch branch in
 The server:
 
 - **Stores one row per installation** (upsert on each check-in), so the dataset
-  stays small and bounded — it never grows unboundedly.
+  stays small and bounded — it never grows unboundedly. Per-day activity is
+  tracked in a separate table (one row per installation per day it reports),
+  which keeps the daily-activity chart accurate even for installations that
+  ping every day.
 - **Prunes stale installations** — a background retention job (every
   `PRUNE_INTERVAL_HOURS`) moves installations not seen for `PRUNE_AFTER_DAYS`
   (default 365, i.e. abandoned for a year) to a pruned table. Their IDs are
