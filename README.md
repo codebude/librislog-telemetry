@@ -8,6 +8,8 @@
   <a href="#api">API Reference</a>
   &nbsp;·&nbsp;
   <a href="#docker-compose-setup--configuration">Configuration</a>
+  &nbsp;·&nbsp;
+  <a href="https://metrics.librislog.app/">📈 Live Dashboard</a>
 </p>
 
 <p align="center">
@@ -19,6 +21,8 @@
 </p>
 
 Minimal, open source and transparent telemetry server for [LibrisLog](https://github.com/codebude/librislog).
+
+> 🚀 **Live instance:** [metrics.librislog.app](https://metrics.librislog.app/) — see the public dashboard in action.
 
 > `docker compose up -d` → anonymous, aggregate usage statistics for your
 > open-source app, with a clean public dashboard. No vendor lock-in.
@@ -74,6 +78,9 @@ The server:
   checked in during the last 30 days.
 
 ## Quick Start (local)
+
+Prefer to look before you run? The public instance is at
+[**metrics.librislog.app**](https://metrics.librislog.app/).
 
 ```bash
 uv sync
