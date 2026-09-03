@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LibrisLog Telemetry</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
   <meta name="description" content="Transparent, anonymous usage statistics for LibrisLog." />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
@@ -130,7 +131,8 @@
     <header class="hero">
       <h1>LibrisLog <span>Telemetry</span></h1>
       <p class="sub">
-        Anonymous, aggregate usage statistics for the LibrisLog book-tracking
+        Anonymous, aggregate usage statistics for the
+        <a href="https://github.com/codebude/librislog">LibrisLog</a> book-tracking
         app. This page shows how many people run LibrisLog, on which platforms,
         and with which versions, nothing personally identifiable.
       </p>
@@ -205,7 +207,7 @@
         <li><strong>No personal data.</strong> Each installation sends a random, anonymous ID plus its version, operating system, architecture and runtime. No IPs, no paths, no library contents are stored.</li>
         <li><strong>One row per installation.</strong> The database keeps a single row per installation that is updated on each check-in, so the dataset stays small and bounded, it never grows unboundedly.</li>
         <li><strong>Breakdowns cover active installations.</strong> The versions, operating system, architecture and runtime charts only count installations that checked in during the last 30 days. Older, inactive installations are excluded (they are moved to a pruned table after a year without activity).</li>
-        <li><strong>How to opt out.</strong> You can disable telemetry in LibrisLog's settings. If you do, this server never hears from your installation again.</li>
+        <li><strong>How to opt out.</strong> You can disable telemetry in LibrisLog's settings, <a href="https://docs.librislog.app/guide/telemetry.html#how-to-disable-telemetry">see the docs</a>. If you do, this server never hears from your installation again.</li>
         <li><strong>This page is public.</strong> Only aggregate counts are shown, never individual installations.</li>
       </ul>
     </div>
