@@ -69,6 +69,14 @@ def test_stats_dashboard_page(client: TestClient):
     assert resp.status_code == 200
     assert "LibrisLog" in resp.text
     assert "chart-daily" in resp.text
+    assert 'href="/favicon.ico"' in resp.text
+
+
+def test_favicon_served(client: TestClient):
+    resp = client.get("/favicon.ico")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "image/svg+xml"
+    assert resp.content.startswith(b"<svg")
 
 
 def test_stats_include_pruned_in_all_time_totals(client: TestClient, session: Session):
