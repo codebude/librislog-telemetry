@@ -26,7 +26,10 @@ async def _periodic_prune(interval_hours: int) -> None:
     Runs every *interval_hours* hours. Uses the app engine directly so it works
     independently of request-scoped sessions.
     """
-    from app.services.retention import prune_stale_installations
+    from app.services.retention import (
+        prune_stale_daily_activity,
+        prune_stale_installations,
+    )
     from app.database import get_session
 
     loop = asyncio.get_running_loop()
@@ -43,6 +46,11 @@ async def _periodic_prune(interval_hours: int) -> None:
                 )
                 if pruned:
                     logger.info("Retention: pruned %d stale installation(s)", pruned)
+                # Daily activity only needs the dashboard's 30-day window.
+                await loop.run_in_executor(
+                    None,
+                    lambda: prune_stale_daily_activity(session, keep_days=30),
+                )
             failures = 0
         except Exception as exc:
             failures += 1

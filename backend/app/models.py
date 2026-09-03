@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import Column, DateTime, TypeDecorator
+from sqlalchemy import Column, DateTime, PrimaryKeyConstraint, TypeDecorator
 from sqlmodel import Field, SQLModel
 
 from app.time_utils import utcnow
@@ -76,3 +76,23 @@ class PrunedInstallation(SQLModel, table=True):
         default_factory=utcnow,
         sa_column=Column(UtcDateTime, default=utcnow, index=True),
     )
+
+
+class DailyActivity(SQLModel, table=True):
+    """One row per installation per day it reported in.
+
+    Unlike ``Installation.last_seen_at`` (which only keeps the most recent
+    ping), this table retains the full per-day history, so the "daily active
+    installations" chart can count every installation that pinged on a given
+    day instead of only the ones whose *latest* ping was on that day.
+    """
+
+    __tablename__: str = "daily_activity"
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "installation_id", "activity_date", name="pk_daily_activity"
+        ),
+    )
+
+    installation_id: str = Field(max_length=64, index=True)
+    activity_date: str = Field(max_length=10, index=True)

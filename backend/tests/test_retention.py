@@ -4,8 +4,11 @@ from datetime import timedelta
 
 from sqlmodel import Session, select
 
-from app.models import Installation, PrunedInstallation
-from app.services.retention import prune_stale_installations
+from app.models import DailyActivity, Installation, PrunedInstallation
+from app.services.retention import (
+    prune_stale_daily_activity,
+    prune_stale_installations,
+)
 from app.time_utils import utcnow
 
 
@@ -52,3 +55,17 @@ def test_prune_no_stale_is_noop(session: Session):
     session.commit()
     assert prune_stale_installations(session, older_than_days=30) == 0
     assert len(session.exec(select(PrunedInstallation)).all()) == 0
+
+
+def test_prune_daily_activity_keeps_recent(session: Session):
+    now = utcnow()
+    session.add(DailyActivity(installation_id="a", activity_date=now.date().isoformat()))
+    session.add(DailyActivity(installation_id="b", activity_date=(now - timedelta(days=10)).date().isoformat()))
+    session.add(DailyActivity(installation_id="c", activity_date=(now - timedelta(days=60)).date().isoformat()))
+    session.commit()
+
+    deleted = prune_stale_daily_activity(session, keep_days=30)
+    assert deleted == 1
+
+    remaining = {r.activity_date for r in session.exec(select(DailyActivity)).all()}
+    assert remaining == {now.date().isoformat(), (now - timedelta(days=10)).date().isoformat()}

@@ -14,7 +14,7 @@ from sqlalchemy import delete
 from sqlmodel import Session, col, func, inspect, select
 
 from app.database import engine
-from app.models import Installation
+from app.models import DailyActivity, Installation
 
 SEED_PREFIX = "seed-"
 
@@ -39,6 +39,14 @@ def _counts(session: Session) -> tuple[int, int]:
     return seed, total
 
 
+def _delete_daily_activity(session: Session, *, prefix: str | None) -> None:
+    """Delete daily-activity rows, optionally for a given installation prefix."""
+    stmt = delete(DailyActivity)
+    if prefix is not None:
+        stmt = stmt.where(col(DailyActivity.installation_id).like(f"{prefix}%"))
+    session.exec(stmt)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Clean seeded telemetry data.")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -61,11 +69,13 @@ def main() -> None:
                     col(Installation.installation_id).like(f"{SEED_PREFIX}%")
                 )
             )
+            _delete_daily_activity(session, prefix=SEED_PREFIX)
             session.commit()
             print(f"Deleted {result.rowcount} seeded installation(s)")
 
         elif args.all:
             result = session.exec(delete(Installation))
+            _delete_daily_activity(session, prefix=None)
             session.commit()
             print(f"Deleted {result.rowcount} installation(s)")
 

@@ -8,7 +8,7 @@ from sqlmodel import Session, col, func, select
 
 from app._build_info import __version__
 from app.database import get_session
-from app.models import Installation, PrunedInstallation
+from app.models import DailyActivity, Installation, PrunedInstallation
 from app.schemas import (
     DailyStat,
     LongevityEntry,
@@ -66,16 +66,21 @@ def _active_counts(session: Session, now) -> tuple[int, int]:
 
 
 def _daily_activity(session: Session, now) -> list[DailyStat]:
-    """Distinct installations active per day over the last 30 days."""
-    cutoff = now - timedelta(days=30)
+    """Distinct installations active per day over the last 30 days.
+
+    Counts from the ``daily_activity`` table (one row per installation per day),
+    so an installation that pings every day is counted on *every* day, not just
+    its most recent ping.
+    """
+    cutoff = (now - timedelta(days=30)).date().isoformat()
     rows = session.exec(
         select(
-            func.date(col(Installation.last_seen_at)),
-            func.count(col(Installation.installation_id)),
+            col(DailyActivity.activity_date),
+            func.count(col(DailyActivity.installation_id)),
         )
-        .where(col(Installation.last_seen_at) >= cutoff)
-        .group_by(func.date(col(Installation.last_seen_at)))
-        .order_by(func.date(col(Installation.last_seen_at)))
+        .where(col(DailyActivity.activity_date) >= cutoff)
+        .group_by(col(DailyActivity.activity_date))
+        .order_by(col(DailyActivity.activity_date))
     ).all()
     return [DailyStat(date=str(date), count=int(count)) for date, count in rows]
 
