@@ -96,3 +96,4 @@ class DailyActivity(SQLModel, table=True):
 
     installation_id: str = Field(max_length=64, index=True)
     activity_date: str = Field(max_length=10, index=True)
+    version: str = Field(default="", max_length=32, index=True)

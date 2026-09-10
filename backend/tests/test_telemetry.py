@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from app.models import Installation
+from app.models import DailyActivity, Installation
 
 
 def _payload(**overrides):
@@ -33,6 +33,12 @@ def test_ingest_new_installation(client: TestClient, session: Session):
     assert row.os == "Linux"
     assert row.message_version == 1
     assert row.first_seen_at == row.last_seen_at
+    activity = session.get(
+        DailyActivity,
+        ("inst-001", row.last_seen_at.date().isoformat()),
+    )
+    assert activity is not None
+    assert activity.version == "v1.2.3"
 
 
 def test_ingest_without_message_version_rejected(client: TestClient):
@@ -62,6 +68,12 @@ def test_ingest_updates_existing(client: TestClient, session: Session):
     row = rows[0]
     assert row.version == "v1.1.0"
     assert (row.last_seen_at - row.first_seen_at).total_seconds() < 1
+    activity = session.get(
+        DailyActivity,
+        ("inst-001", row.last_seen_at.date().isoformat()),
+    )
+    assert activity is not None
+    assert activity.version == "v1.1.0"
 
 
 def test_ingest_unknown_fields_rejected(client: TestClient):

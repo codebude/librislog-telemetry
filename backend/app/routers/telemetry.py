@@ -76,20 +76,6 @@ async def ingest_telemetry(
     now = utcnow()
     existing = session.get(Installation, payload.installation_id)
 
-    # Record this installation as active today (one row per install per day).
-    today = now.date().isoformat()
-    activity = session.exec(
-        select(DailyActivity).where(
-            col(DailyActivity.installation_id) == payload.installation_id,
-            col(DailyActivity.activity_date) == today,
-        )
-    ).first()
-    if activity is None:
-        session.add(DailyActivity(
-            installation_id=payload.installation_id,
-            activity_date=today,
-        ))
-
     if existing is None:
         # If this installation was pruned for inactivity, resurrect it: move it
         # back to the live table so it is not double-counted in the all-time
@@ -115,6 +101,25 @@ async def ingest_telemetry(
         _apply_common(existing, payload)
         _apply_version_specific(existing, payload)
         existing.last_seen_at = now
+
+    # Record the effective version for this installation on each ping day.
+    # Repeated pings on the same day update the snapshot if the installation
+    # upgrades during that day.
+    today = now.date().isoformat()
+    activity = session.exec(
+        select(DailyActivity).where(
+            col(DailyActivity.installation_id) == payload.installation_id,
+            col(DailyActivity.activity_date) == today,
+        )
+    ).first()
+    if activity is None:
+        session.add(DailyActivity(
+            installation_id=payload.installation_id,
+            activity_date=today,
+            version=existing.version,
+        ))
+    else:
+        activity.version = existing.version
 
     session.commit()
     return TelemetryOut(installation_id=payload.installation_id)
