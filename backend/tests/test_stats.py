@@ -23,7 +23,11 @@ def _seed(session: Session, installation_id: str, **overrides) -> None:
     session.add(Installation(**data))
     # Mirror the ingest behaviour: one DailyActivity row per day the install pings.
     activity_date = data["last_seen_at"].date().isoformat()
-    session.add(DailyActivity(installation_id=installation_id, activity_date=activity_date))
+    session.add(DailyActivity(
+        installation_id=installation_id,
+        activity_date=activity_date,
+        version=data["version"],
+    ))
 
 
 def test_empty_stats(client: TestClient):
@@ -205,3 +209,38 @@ def test_daily_activity_counts_each_ping_day(client: TestClient, session: Sessio
     by_date = {e["date"]: e["count"] for e in body["daily"]}
     assert by_date.get(yesterday) == 2  # pinger + yesterday-only
     assert by_date.get(today) == 1      # only pinger
+
+
+def test_version_mix_keeps_history_for_daily_pings(client: TestClient, session: Session):
+    """A later ping must not replace an earlier day's version snapshot."""
+    now = utcnow()
+    yesterday = (now - timedelta(days=1)).date().isoformat()
+    session.add(Installation(
+        installation_id="upgraded",
+        version="v2.0.0",
+        os="Linux",
+        architecture="x64",
+        runtime="docker",
+        first_seen_at=now - timedelta(days=1),
+        last_seen_at=now,
+    ))
+    session.add(DailyActivity(
+        installation_id="upgraded",
+        activity_date=yesterday,
+        version="v1.0.0",
+    ))
+    session.add(DailyActivity(
+        installation_id="upgraded",
+        activity_date=now.date().isoformat(),
+        version="v2.0.0",
+    ))
+    session.commit()
+
+    resp = client.get("/api/stats")
+    assert resp.status_code == 200
+    by_date = {
+        entry["date"]: {version["label"]: version["count"] for version in entry["versions"]}
+        for entry in resp.json()["version_mix"]
+    }
+    assert by_date[yesterday] == {"v1.0.0": 1}
+    assert by_date[now.date().isoformat()] == {"v2.0.0": 1}

@@ -47,10 +47,11 @@ def main(count: int) -> None:
                 now,
             )
             install_id = f"seed-{i:04d}"
+            version = random.choice(_VERSIONS)
             session.add(
                 Installation(
                     installation_id=install_id,
-                    version=random.choice(_VERSIONS),
+                    version=version,
                     os=random.choice(_OS),
                     architecture=random.choice(_ARCHS),
                     runtime=random.choice(_RUNTIMES),
@@ -66,6 +67,7 @@ def main(count: int) -> None:
                     DailyActivity(
                         installation_id=install_id,
                         activity_date=activity_date,
+                        version=version,
                     )
                 )
             added += 1
