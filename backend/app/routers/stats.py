@@ -143,18 +143,18 @@ def _longevity(session: Session, now) -> list[LongevityEntry]:
 
 
 def _version_mix(session: Session, now) -> list[VersionMixEntry]:
-    """Version distribution of active installations per day, last 30 days."""
-    cutoff = now - timedelta(days=30)
+    """Version distribution observed per day, last 30 days."""
+    cutoff = (now - timedelta(days=30)).date().isoformat()
     rows = session.exec(
         select(
-            func.date(col(Installation.last_seen_at)),
-            col(Installation.version),
-            func.count(col(Installation.installation_id)),
+            col(DailyActivity.activity_date),
+            col(DailyActivity.version),
+            func.count(col(DailyActivity.installation_id)),
         )
-        .where(col(Installation.last_seen_at) >= cutoff)
-        .where(col(Installation.version) != "")
-        .group_by(func.date(col(Installation.last_seen_at)), col(Installation.version))
-        .order_by(func.date(col(Installation.last_seen_at)))
+        .where(col(DailyActivity.activity_date) >= cutoff)
+        .where(col(DailyActivity.version) != "")
+        .group_by(col(DailyActivity.activity_date), col(DailyActivity.version))
+        .order_by(col(DailyActivity.activity_date))
     ).all()
 
     by_date: dict[str, list[StatEntry]] = {}
